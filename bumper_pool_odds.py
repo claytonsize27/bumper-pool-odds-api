@@ -30,6 +30,43 @@ def fetch_match_data(player_a, player_b):
             f"(player_a_id.eq.{player_b},player_b_id.eq.{player_a})"
         ).execute()
 
+        # Check for empty data
+        if not response.data:
+            logger.error(f"No match data returned: {response}")
+            return []
+
+        # Log the raw response for debugging
+        logger.info(f"Fetched raw match data for {player_a} vs {player_b}: {response.data}")
+
+        # Return only matches where both player IDs are present
+        valid_matches = [
+            match for match in response.data
+            if match.get("player_a_id") and match.get("player_b_id") and match.get("winner_id")
+        ]
+
+        if not valid_matches:
+            logger.warning(f"No valid matches found for {player_a} vs {player_b}")
+
+        return valid_matches
+    except Exception as e:
+        logger.error(f"Failed to fetch match data: {e}", exc_info=True)
+        return []
+    try:
+        # Build the exact query string for debugging
+        query_string = (
+            f"SELECT * FROM matches WHERE is_finalized = true AND ((player_a_id = '{player_a}' AND player_b_id = '{player_b}') OR (player_a_id = '{player_b}' AND player_b_id = '{player_a}'))"
+        )
+        logger.info(f"Executing Supabase Query: {query_string}")
+
+        # Fetch matches with either player as player_a or player_b
+        response = supabase.table("matches").select("id, player_a_id, player_b_id, winner_id, final_score, is_finalized").filter(
+            "is_finalized", "eq", True
+        ).filter(
+            "or",
+            f"(player_a_id.eq.{player_a},player_b_id.eq.{player_b})",
+            f"(player_a_id.eq.{player_b},player_b_id.eq.{player_a})"
+        ).execute()
+
         # Check for HTTP errors
         if response.status_code != 200:
             logger.error(f"Error fetching matches: {response.json()}")
@@ -150,6 +187,18 @@ def fetch_match_data(player_a, player_b):
         return []
 
 def fetch_player_names():
+    try:
+        response = supabase.table("players").select("id, name").execute()
+
+        # Check for empty data
+        if not response.data:
+            logger.error(f"No player data returned: {response}")
+            return {}
+
+        return {player["id"]: player["name"] for player in response.data}
+    except Exception as e:
+        logger.error(f"Failed to fetch player names: {e}", exc_info=True)
+        return {}
     try:
         response = supabase.table("players").select("id, name").execute()
 
