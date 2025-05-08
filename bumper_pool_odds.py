@@ -44,9 +44,7 @@ def calculate_exact_margin_probs(mu, sigma):
     margin_probs = {}
     for i in range(1, 6):
         prob_win = norm.cdf(i + 0.5, mu, sigma) - norm.cdf(i - 0.5, mu, sigma)
-        prob_loss = norm.cdf(-i + 0.5, mu, sigma) - norm.cdf(-i - 0.5, mu, sigma)
         margin_probs[f"{i} ball"] = prob_win
-        margin_probs[f"-{i} ball"] = prob_loss
     return margin_probs
 
 def fetch_player_names():
@@ -108,7 +106,7 @@ def calculate_odds(player_a_id, player_b_id):
         # Calculate margin and standard deviation
         mean_a, std_a = calculate_margin_and_std(player_a_margins)
         mean_b, std_b = calculate_margin_and_std(player_b_margins)
-        predicted_margin = mean_a - mean_b
+        predicted_margin = abs(mean_a - mean_b)  # Always positive margin for consistency
         mu = predicted_margin if player_a_win_rate > player_b_win_rate else -predicted_margin
         sigma = (std_a + std_b) / 2
 
@@ -128,17 +126,17 @@ def calculate_odds(player_a_id, player_b_id):
                 player_a_name: prob_to_american(player_a_win_rate),
                 player_b_name: prob_to_american(player_b_win_rate),
             },
-            "spread_line": round(mu, 1),
+            "spread_line": round(predicted_margin, 1),
             "spread_odds": {
-                player_a_name: prob_to_american(norm.cdf(mu / sigma)),
-                player_b_name: prob_to_american(1 - norm.cdf(mu / sigma)),
+                player_a_name: prob_to_american(norm.cdf(predicted_margin / sigma)),
+                player_b_name: prob_to_american(1 - norm.cdf(predicted_margin / sigma)),
             },
             "sweep_odds": {
-                player_a_name: prob_to_american(calculate_sweep_odds(mu, sigma)),
-                player_b_name: prob_to_american(calculate_sweep_odds(-mu, sigma)),
+                player_a_name: prob_to_american(calculate_sweep_odds(predicted_margin, sigma)),
+                player_b_name: prob_to_american(calculate_sweep_odds(-predicted_margin, sigma)),
             },
-            "score_margin_probs": calculate_exact_margin_probs(mu, sigma),
-            "predicted_margin": round(mu, 1)
+            "score_margin_probs": calculate_exact_margin_probs(predicted_margin, sigma),
+            "predicted_margin": round(predicted_margin, 1)
         }
 
         return odds
