@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from bumper_pool_odds import calculate_odds
 import logging
+import traceback
 
 app = Flask(__name__)
 CORS(app)
@@ -24,11 +25,13 @@ def predict():
         if not odds:
             logger.info(f"No match data available for players {player_a_id} vs {player_b_id}")
             return jsonify({"error": "No match data available"}), 404
-        logger.info(f"Odds calculated for players {player_a_id} vs {player_b_id}")
+        
+        logger.info(f"Odds calculated for players {player_a_id} vs {player_b_id}: {odds}")
         return jsonify(odds)
     except Exception as e:
         logger.error(f"Error calculating odds for players {player_a_id} vs {player_b_id}: {e}")
-        return jsonify({"error": "Failed to calculate odds"}), 500
+        logger.error(traceback.format_exc())
+        return jsonify({"error": f"Failed to calculate odds: {str(e)}"}), 500
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
