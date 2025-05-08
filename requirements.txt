@@ -3,3 +3,5 @@ gunicorn
 supabase
 python-dotenv
 flask-cors
+numpy
+scipy
