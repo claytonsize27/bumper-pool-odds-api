@@ -15,6 +15,23 @@ logger = logging.getLogger(__name__)
 
 def fetch_match_data(player_a, player_b):
     try:
+        # Fetch matches with either player as player_a or player_b
+        response = supabase.table("matches").select("winner_id, final_score").filter("is_finalized", "eq", True).filter(
+            "or",
+            f"(player_a_id.eq.{player_a},player_b_id.eq.{player_b})",
+            f"(player_a_id.eq.{player_b},player_b_id.eq.{player_a})"
+        ).execute()
+
+        if response.error:
+            logger.error(f"Error fetching matches: {response.error}")
+            return []
+
+        logger.info(f"Fetched match data for {player_a} vs {player_b}: {response.data}")
+        return response.data
+    except Exception as e:
+        logger.error(f"Failed to fetch match data: {e}", exc_info=True)
+        return []
+    try:
         response = supabase.table("matches").select("winner_id, final_score").filter("is_finalized", "eq", True).filter(
             "or",
             f"(player_a_id.eq.{player_a},player_b_id.eq.{player_b})"
